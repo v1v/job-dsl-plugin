@@ -5038,4 +5038,53 @@ class PublisherContextSpec extends Specification {
         where:
         value << [true, false]
     }
+
+    def 'richText with some options'() {
+        when:
+        context.richText {
+            markupLanguage('HTML')
+            textForStable('<h2>Hello World</h2>')
+        }
+
+        then:
+        with(context.publisherNodes[0]) {
+            name() == 'org.korosoft.jenkins.plugin.rtp.RichTextPublisher'
+            children().size() == 6
+            parserName[0].value() == 'HTML'
+            stableText[0].value() == '<h2>Hello World</h2>'
+            unstableText[0].value().empty
+            failedText[0].value().empty
+            unstableAsStable[0].value() == true
+            failedAsStable[0].value() == true
+        }
+        1 * jobManagement.requireMinimumPluginVersion('rich-text-publisher-plugin', '1.3')
+    }
+
+    def 'richText with all options'() {
+        when:
+        context.richText {
+            markupLanguage('HTML')
+            textForStable('<h2>Hello World</h2>')
+            textForUnstable('<h2>Unstable</h2>')
+            textForFailed('<h2>Failed</h2>')
+            sameTextForUnstable(value)
+            sameTextForFailed(value)
+        }
+
+        then:
+        with(context.publisherNodes[0]) {
+            name() == 'org.korosoft.jenkins.plugin.rtp.RichTextPublisher'
+            children().size() == 6
+            parserName[0].value() == 'HTML'
+            stableText[0].value() == '<h2>Hello World</h2>'
+            unstableText[0].value() == '<h2>Unstable</h2>'
+            failedText[0].value() == '<h2>Failed</h2>'
+            unstableAsStable[0].value() == value
+            failedAsStable[0].value() == value
+        }
+        1 * jobManagement.requireMinimumPluginVersion('rich-text-publisher-plugin', '1.3')
+
+        where:
+        value << [true, false]
+    }
 }

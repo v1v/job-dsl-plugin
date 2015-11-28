@@ -1679,6 +1679,26 @@ class PublisherContext extends AbstractExtensibleContext {
         }
     }
 
+    /**
+     * Generates custom rich text message to the Build pages and Job main page
+     *
+     * @since 1.41
+     */
+    @RequiresPlugin(id = 'rich-text-publisher-plugin', minimumVersion = '1.3')
+    void richText(@DslContext(RichTextContext) Closure closure) {
+        RichTextContext context = new RichTextContext()
+        ContextHelper.executeInContext(closure, context)
+
+        publisherNodes << new NodeBuilder().'org.korosoft.jenkins.plugin.rtp.RichTextPublisher' {
+            parserName(context.markupLanguage)
+            stableText(context.textForStable ?: '')
+            unstableText(context.textForUnstable ?: '')
+            failedText(context.textForFailed ?: '')
+            unstableAsStable(context.sameTextForUnstable)
+            failedAsStable(context.sameTextForFailed)
+        }
+    }
+
     @SuppressWarnings('NoDef')
     private static addStaticAnalysisContext(def nodeBuilder, StaticAnalysisContext context) {
         nodeBuilder.with {

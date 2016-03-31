@@ -170,4 +170,9 @@ class InterruptibleJobManagement implements JobManagement {
     Node callExtension(String name, Item item, Class<? extends ExtensibleContext> contextType, Object... args) {
         delegate.callExtension(name, item, contextType, args)
     }
+
+    @Override
+    public void dslExists(String description, boolean failIfMissing) {
+      delegate.dslExists(description, failIfMissing)
+    }
 }

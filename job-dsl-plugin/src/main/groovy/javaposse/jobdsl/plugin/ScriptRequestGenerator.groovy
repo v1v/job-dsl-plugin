@@ -20,7 +20,7 @@ class ScriptRequestGenerator implements Closeable {
     }
 
     Set<ScriptRequest> getScriptRequests(String targets, boolean usingScriptText, String scriptText,
-                                         boolean ignoreExisting,
+                                         boolean ignoreExisting, boolean unstableDSLNotExist,
                                          String additionalClasspath) throws IOException, InterruptedException {
         Set<ScriptRequest> scriptRequests = new LinkedHashSet<ScriptRequest>()
 

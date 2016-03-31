@@ -108,4 +108,8 @@ abstract class MockJobManagement extends AbstractJobManagement {
     @Override
     void createOrUpdateUserContent(UserContent userContent, boolean ignoreExisting) {
     }
+
+    @Override
+    void dslExists(String description, boolean failIfMissing) {
+    }
 }

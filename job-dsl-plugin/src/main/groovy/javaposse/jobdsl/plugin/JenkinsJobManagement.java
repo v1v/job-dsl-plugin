@@ -416,6 +416,11 @@ public final class JenkinsJobManagement extends AbstractJobManagement {
         }
     }
 
+    @Override
+    public void dslExists(String description, boolean failIfMissing) {
+        failOrMarkBuildAsUnstable("XXXXX", failIfMissing);
+    }
+
     private void failOrMarkBuildAsUnstable(String message, boolean fail) {
         if (fail) {
             throw new DslScriptException(message);

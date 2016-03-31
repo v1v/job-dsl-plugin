@@ -253,4 +253,12 @@ interface JobManagement {
      */
     Node callExtension(String name, Item item, Class<? extends ExtensibleContext> contextType,
                        Object... args) throws Throwable
+
+     /**
+      * Logs a warning and sets the build status to unstable if the version of Jenkins core is older than the given
+      * version.
+      *
+      * @since 1.45
+      */
+     void dslExists(String description, boolean failIfMissing)
 }

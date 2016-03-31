@@ -94,6 +94,8 @@ public class ExecuteDslScripts extends Builder {
 
     private final boolean ignoreExisting;
 
+    private final boolean unstableDSLNotExist;
+
     private final RemovedJobAction removedJobAction;
 
     private final RemovedViewAction removedViewAction;
@@ -103,14 +105,15 @@ public class ExecuteDslScripts extends Builder {
     private final String additionalClasspath;
 
     @DataBoundConstructor
-    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
-                             RemovedViewAction removedViewAction, LookupStrategy lookupStrategy,
-                             String additionalClasspath) {
+    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, boolean unstableDSLNotExist,
+                             RemovedJobAction removedJobAction, RemovedViewAction removedViewAction,
+                             LookupStrategy lookupStrategy, String additionalClasspath) {
         // Copy over from embedded object
         this.usingScriptText = scriptLocation == null || scriptLocation.usingScriptText;
         this.targets = scriptLocation == null ? null : scriptLocation.targets;
         this.scriptText = scriptLocation == null ? null : scriptLocation.scriptText;
         this.ignoreExisting = ignoreExisting;
+        this.unstableDSLNotExist = unstableDSLNotExist;
         this.removedJobAction = removedJobAction;
         this.removedViewAction = removedViewAction;
         this.lookupStrategy = lookupStrategy == null ? LookupStrategy.JENKINS_ROOT : lookupStrategy;
@@ -119,7 +122,7 @@ public class ExecuteDslScripts extends Builder {
 
     public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
                              LookupStrategy lookupStrategy) {
-        this(scriptLocation, ignoreExisting, removedJobAction, RemovedViewAction.IGNORE, lookupStrategy, null);
+        this(scriptLocation, ignoreExisting, false, removedJobAction, RemovedViewAction.IGNORE, lookupStrategy, null);
     }
 
     public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction) {
@@ -128,7 +131,7 @@ public class ExecuteDslScripts extends Builder {
 
     public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
                              RemovedViewAction removedViewAction, LookupStrategy lookupStrategy) {
-        this(scriptLocation, ignoreExisting, removedJobAction, removedViewAction, lookupStrategy, null);
+        this(scriptLocation, ignoreExisting, false, removedJobAction, removedViewAction, lookupStrategy, null);
     }
 
     ExecuteDslScripts(String scriptText) {
@@ -136,6 +139,7 @@ public class ExecuteDslScripts extends Builder {
         this.scriptText = scriptText;
         this.targets = null;
         this.ignoreExisting = false;
+        this.unstableDSLNotExist = false;
         this.removedJobAction = RemovedJobAction.DISABLE;
         this.removedViewAction = RemovedViewAction.IGNORE;
         this.lookupStrategy = LookupStrategy.JENKINS_ROOT;
@@ -160,6 +164,10 @@ public class ExecuteDslScripts extends Builder {
 
     public boolean isIgnoreExisting() {
         return ignoreExisting;
+    }
+
+    public boolean isUnstableDSLNotExist() {
+        return unstableDSLNotExist;
     }
 
     public RemovedJobAction getRemovedJobAction() {
@@ -195,18 +203,20 @@ public class ExecuteDslScripts extends Builder {
     @Override
     public boolean perform(final AbstractBuild<?, ?> build, final Launcher launcher,
                            final BuildListener listener) throws InterruptedException, IOException {
+        EnvVars env = null;
+        JobManagement jm = null;
         try {
-            EnvVars env = build.getEnvironment(listener);
+            env = build.getEnvironment(listener);
             env.putAll(build.getBuildVariables());
 
-            JobManagement jm = new InterruptibleJobManagement(
+            jm = new InterruptibleJobManagement(
                     new JenkinsJobManagement(listener.getLogger(), env, build, getLookupStrategy())
             );
 
             ScriptRequestGenerator generator = new ScriptRequestGenerator(build, env);
             try {
                 Set<ScriptRequest> scriptRequests = generator.getScriptRequests(
-                        targets, usingScriptText, scriptText, ignoreExisting, additionalClasspath
+                        targets, usingScriptText, scriptText, ignoreExisting, unstableDSLNotExist, additionalClasspath
                 );
 
                 DslScriptLoader dslScriptLoader = new DslScriptLoader(jm);
@@ -233,11 +243,15 @@ public class ExecuteDslScripts extends Builder {
                 generator.close();
             }
         } catch (RuntimeException e) {
-            if (!(e instanceof DslException)) {
+
+            if (e instanceof DslException) {
+                jm.dslExists(e.getMessage(), !unstableDSLNotExist);
+                return true;
+            } else {
                 e.printStackTrace(listener.getLogger());
+                LOGGER.log(Level.FINE, String.format("Exception while processing DSL scripts: %s", e.getMessage()), e);
+                throw new AbortException(e.getMessage());
             }
-            LOGGER.log(Level.FINE, String.format("Exception while processing DSL scripts: %s", e.getMessage()), e);
-            throw new AbortException(e.getMessage());
         }
     }
 
